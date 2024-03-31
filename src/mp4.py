@@ -218,7 +218,7 @@ class Mp4:
         data_offset = get_int(trun_block.content[cursor : cursor + 4])
         cursor += 4
         samples = []
-        for i in range((len(trun_block.content) - cursor) // 8):
+        for _ in range((len(trun_block.content) - cursor) // 8):
             samples.append(
                 {
                     "sample_duration": get_int(trun_block.content[cursor : cursor + 4]),
