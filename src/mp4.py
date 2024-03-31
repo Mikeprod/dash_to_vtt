@@ -105,6 +105,10 @@ class Mp4:
         )
 
     def sidx_content(self) -> dict[str, int]:
+        """Parse the sidx block and return its content.
+
+        :return: Dictionary of the sidx block content
+        """
         block = self._blocks_for_analysis["sidx"]
         cursor = 0
         t0 = get_int(block.content[cursor : cursor + 4])  # or something else not reported ?
@@ -138,16 +142,28 @@ class Mp4:
         }
 
     def moof_content(self) -> dict[str, Any]:
+        """Parse the moof block and return its content.
+
+        :return: Dictionary of the moof block content
+        """
         block = self._blocks_for_analysis["moof"]
         cursor = block.cursor - block.size + 4
         self.read_blocks(cursor, block.cursor)
         return {"mfhd": self.mfhd_content(), "traf": self.traf_content(), "content": block.content}
 
     def mfhd_content(self) -> dict[str, int]:
+        """Parse the mfhd block and return its content.
+
+        :return: Dictionary of the mfhd block content
+        """
         mfhd_block = self._blocks_for_analysis["mfhd"]
         return {"sequence_number": get_int(mfhd_block.content), "content": mfhd_block.content}
 
     def traf_content(self) -> dict[str, int]:
+        """Parse the traf block and return its content.
+
+        :return: Dictionary of the traf block content
+        """
         block = self._blocks_for_analysis["traf"]
         cursor = block.cursor - block.size + 4
         self.read_blocks(cursor, block.cursor)
@@ -159,6 +175,10 @@ class Mp4:
         }
 
     def tfhd_content(self) -> dict[str, int]:
+        """Parse the tfhd block and return its content.
+
+        :return: Dictionary of the tfhd block content
+        """
         tfhd_block = self._blocks_for_analysis["tfhd"]
         output = {
             "data_source": get_int(tfhd_block.content[0:2]),
@@ -176,12 +196,20 @@ class Mp4:
         return output
 
     def tfdt_content(self) -> dict[str, int]:
+        """Parse the tfdt block and return its content.
+
+        :return: Dictionary of the tfdt block content
+        """
         tfdt_block = self._blocks_for_analysis["tfdt"]
         version = get_int(tfdt_block.content[:1])
         base_media_decode_time = get_int(tfdt_block.content[1:])
         return {"version": version, "base_media_decode_time": base_media_decode_time, "content": tfdt_block.content}
 
     def trun_content(self) -> dict[str, int]:
+        """Parse the trun block and return its content.
+
+        :return: Dictionary of the trun block content
+        """
         trun_block = self._blocks_for_analysis["trun"]
         flags = trun_block.content[:4]  # to be discovered later
         cursor = 4
@@ -207,6 +235,10 @@ class Mp4:
         }
 
     def mdat_content(self):
+        """Parse the mdat block and return its content.
+
+        :return: Dictionary of the mdat block content
+        """
         block = self._blocks_for_analysis["mdat"]
         samples = self.blocks["moof"]["traf"]["trun"]["samples"]
         cursor = 0

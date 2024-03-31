@@ -4,15 +4,50 @@ from typing import List
 
 
 def order_alphabetically(unsorted_list: List[str]) -> List[str]:
+    """Order a list of segment names alphabetically.
+
+    :param unsorted_list: list of strings to order
+    :type unsorted_list: List[str]
+    :return: list of strings ordered alphabetically
+    :rtype: List[str]
+    """
     return sorted(unsorted_list, key=lambda x: int(x.split("=")[-1].split("-")[-1].split(".")[0]))
 
 
 def get_int(value: bytes) -> int:
+    """Convert a bytes value to an integer.
+
+    :param value: bytes value to convert
+    :type value: bytes
+    :return: integer value
+    :rtype: int
+    """
     return int(value.hex(), 16)
 
 
 class timedelta_new(timedelta):
+    """A subclass of timedelta that allows for float values in the constructor."""
+
     def __new__(cls, days=0, seconds=0, microseconds=0, milliseconds=0, minutes=0, hours=0, weeks=0):
+        """Create a new timedelta object.
+
+        :param days: number of days, defaults to 0
+        :type days: int, optional
+        :param seconds: number of seconds, defaults to 0
+        :type seconds: int, optional
+        :param microseconds: number of microseconds, defaults to 0
+        :type microseconds: int, optional
+        :param milliseconds: number of milliseconds, defaults to 0
+        :type milliseconds: int, optional
+        :param minutes: number of minutes, defaults to 0
+        :type minutes: int, optional
+        :param hours: number of hours, defaults to 0
+        :type hours: int, optional
+        :param weeks: number of weeks, defaults to 0
+        :type weeks: int, optional
+        :return: timedelta object
+        :rtype: timedelta
+        """
         # Doing this efficiently and accurately in C is going to be difficult
         # and error-prone, due to ubiquitous overflow possibilities, and that
         # C double doesn't have enough bits of precision to represent
@@ -113,6 +148,7 @@ class timedelta_new(timedelta):
         return self
 
     def __str__(self):
+        """Return a string representation of the timedelta."""
         mm, ss = divmod(self.seconds, 60)
         hh, mm = divmod(mm, 60)
         s = "%d:%02d:%02d" % (hh, mm, ss)

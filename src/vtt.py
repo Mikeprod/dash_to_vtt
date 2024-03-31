@@ -10,6 +10,13 @@ VTT_HEADER = "WEBVTT\n"
 
 
 def extract_text(text: bytes) -> str:
+    """Extract the text from the mp4 subtitles.
+
+    :param text: text to extract
+    :type text: bytes
+    :return: extracted text
+    :rtype: str
+    """
     if text[:4] == b"vtte":
         return ""
     else:
@@ -33,6 +40,13 @@ def extract_text(text: bytes) -> str:
 
 
 def deduplicate_subtitles(subtitles: str) -> str:
+    """Deduplicate the subtitles.
+
+    :param subtitles: subtitles to deduplicate
+    :type subtitles: str
+    :return: deduplicated subtitles
+    :rtype: str
+    """
     subs = subtitles.split(" --> ")
     subtitle_entries = []
     for i in range(1, len(subs)):
@@ -62,6 +76,15 @@ def deduplicate_subtitles(subtitles: str) -> str:
 
 
 def generate_timeline(samples: list[dict[str, Any]], time_in_stream: int) -> list[str]:
+    """Generate the timeline for the subtitles.
+
+    :param samples: Every element of the subtitle timeline
+    :type samples: list[dict[str, Any]]
+    :param time_in_stream: time in the stream
+    :type time_in_stream: int
+    :return: The timeline, a list of start and end times
+    :rtype: list[str]
+    """
     timeline = []
     current_time = time_in_stream
     for sample in samples:
@@ -72,6 +95,13 @@ def generate_timeline(samples: list[dict[str, Any]], time_in_stream: int) -> lis
 
 
 def vtt_from_mp4(mp4: Mp4) -> str:
+    """Extract the subtitles from a Dash file.
+
+    :param mp4: Dash file to extract the subtitles from
+    :type mp4: Mp4
+    :return: The content of the subtitle file
+    :rtype: str
+    """
     subs = [extract_text(text) for text in mp4.blocks["mdat"]["samples_content"]]
     timeline = generate_timeline(mp4.blocks["moof"]["traf"]["trun"]["samples"], mp4.blocks["sidx"]["time_in_stream"])
     subtitles = ""
