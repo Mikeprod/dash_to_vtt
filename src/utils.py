@@ -1,6 +1,6 @@
-import math as _math
+import math
 from datetime import timedelta
-from typing import List
+from typing import List, Union
 
 
 def order_alphabetically(unsorted_list: List[str]) -> List[str]:
@@ -48,104 +48,77 @@ class timedelta_new(timedelta):
         :return: timedelta object
         :rtype: timedelta
         """
-        # Doing this efficiently and accurately in C is going to be difficult
-        # and error-prone, due to ubiquitous overflow possibilities, and that
-        # C double doesn't have enough bits of precision to represent
-        # microseconds over 10K years faithfully.  The code here tries to make
-        # explicit where go-fast assumptions can be relied on, in order to
-        # guide the C implementation; it's way more convoluted than speed-
-        # ignoring auto-overflow-to-long idiomatic Python could be.
-
-        # XXX Check that all inputs are ints or floats.
-
-        # Final values, all integer.
-        # s and us fit in 32-bit signed ints; d isn't bounded.
-        d = s = us = 0
-
         # Normalize everything to days, seconds, microseconds.
-        days += weeks * 7
-        seconds += minutes * 60 + hours * 3600
-        microseconds += milliseconds * 1000
+        _days = days + weeks * 7
+        _seconds = seconds + minutes * 60 + hours * 3600
+        _microseconds = microseconds + milliseconds * 1000
 
         # Get rid of all fractions, and normalize s and us.
-        # Take a deep breath <wink>.
-        if isinstance(days, float):
-            dayfrac, days = _math.modf(days)
-            daysecondsfrac, daysecondswhole = _math.modf(dayfrac * (24.0 * 3600.0))
-            assert daysecondswhole == int(daysecondswhole)  # can't overflow
-            s = int(daysecondswhole)
-            assert days == int(days)
-            d = int(days)
-        else:
-            daysecondsfrac = 0.0
-            d = days
-        assert isinstance(daysecondsfrac, float)
-        assert abs(daysecondsfrac) <= 1.0
-        assert isinstance(d, int)
-        assert abs(s) <= 24 * 3600
-        # days isn't referenced again before redefinition
+        d_days, d_seconds, d_frac_seconds = cls._convert_days_to_days_n_seconds(_days)
+        s_days, s_seconds, s_frac_seconds = cls._convert_seconds_to_days_n_seconds(_seconds)
 
-        if isinstance(seconds, float):
-            secondsfrac, seconds = _math.modf(seconds)
-            assert seconds == int(seconds)
-            seconds = int(seconds)
-            secondsfrac += daysecondsfrac
-            assert abs(secondsfrac) <= 2.0
-        else:
-            secondsfrac = daysecondsfrac
-        # daysecondsfrac isn't referenced again
-        assert isinstance(secondsfrac, float)
-        assert abs(secondsfrac) <= 2.0
+        if abs(d_frac_seconds + s_frac_seconds) > 2.0:
+            raise AssertionError("Decimal values of seconds should not be greater than 2.0")
 
-        assert isinstance(seconds, int)
-        days, seconds = divmod(seconds, 24 * 3600)
-        d += days
-        s += int(seconds)  # can't overflow
-        assert isinstance(s, int)
-        assert abs(s) <= 2 * 24 * 3600
-        # seconds isn't referenced again before redefinition
-
-        usdouble = secondsfrac * 1e6
-        assert abs(usdouble) < 2.1e6  # exact value not critical
-        # secondsfrac isn't referenced again
-
-        if isinstance(microseconds, float):
-            microseconds = round(microseconds + usdouble)
-            seconds, microseconds = divmod(microseconds, 1000000)
-            days, seconds = divmod(seconds, 24 * 3600)
-            d += days
-            s += seconds
-        else:
-            microseconds = int(microseconds)
-            seconds, microseconds = divmod(microseconds, 1000000)
-            days, seconds = divmod(seconds, 24 * 3600)
-            d += days
-            s += seconds
-            microseconds = round(microseconds + usdouble)
-        assert isinstance(s, int)
-        assert isinstance(microseconds, int)
-        assert abs(s) <= 3 * 24 * 3600
-        assert abs(microseconds) < 3.1e6
+        u_seconds = (s_frac_seconds + d_frac_seconds) * 1e6
+        if abs(u_seconds) >= 2.1e6:  # exact value not critical
+            raise AssertionError("Microseconds should not be greater than 2.1e6")
+        u_days, u_seconds, u_frac_seconds = cls._convert_microseconds_to_days_n_seconds(_microseconds)
+        if (d_seconds + s_seconds + u_seconds) >= 3 * 24 * 3600:
+            raise AssertionError("Seconds should not be greater than 3 * 24 * 3600")
+        if round(u_seconds + u_frac_seconds) >= 3.1e6:
+            raise AssertionError("Microseconds should not be greater than 3.1e6")
 
         # Just a bit of carrying possible for microseconds and seconds.
-        seconds, us = divmod(microseconds, 1000000)
-        s += seconds
-        days, s = divmod(s, 24 * 3600)
-        d += days
+        adjusted_seconds, output_u_seconds = divmod(u_seconds + u_frac_seconds, 1000000)
+        adjusted_days, output_seconds = divmod(d_seconds + s_seconds + u_seconds + adjusted_seconds, 24 * 3600)
+        output_days = int(d_days + s_days + adjusted_days)
 
-        assert isinstance(d, int)
-        assert isinstance(s, int) and 0 <= s < 24 * 3600
-        assert isinstance(us, int) and 0 <= us < 1000000
+        # Checking that the last values are within the expected range
+        if not 0 <= int(output_seconds) < 24 * 3600:
+            raise AssertionError("Seconds should be an integer and between 0 and 24 * 3600")
+        if not 0 <= int(output_u_seconds) < 1000000:
+            raise AssertionError("Microseconds should be an integer and between 0 and 1000000")
 
-        if abs(d) > 999999999:
-            raise OverflowError("timedelta # of days is too large: %d" % d)
+        if abs(output_days) > 999999999:
+            raise OverflowError(f"timedelta # of days is too large: {output_days}")
 
         self = super().__new__(cls, days, seconds, microseconds, milliseconds, minutes, hours, weeks)
-        self._days = d
-        self._seconds = s
-        self._microseconds = us
+        self._days = output_days
+        self._seconds = int(output_seconds)
+        self._microseconds = int(output_u_seconds)
         self._hashcode = -1
         return self
+
+    @classmethod
+    def _convert_days_to_days_n_seconds(cls, days: Union[int, float]) -> tuple[int, int, float]:
+        seconds_decimals = 0.0
+        full_seconds = 0
+        full_days = days
+        if isinstance(days, float):
+            days_decimals, full_days = math.modf(days)
+            seconds_decimals, full_seconds = math.modf(days_decimals * (24.0 * 3600.0))
+        return int(full_days), int(full_seconds), seconds_decimals
+
+    @classmethod
+    def _convert_seconds_to_days_n_seconds(cls, seconds: Union[int, float]) -> tuple[int, int, float]:
+        seconds_full = seconds
+        second_frac = 0.0
+        if isinstance(seconds, float):
+            second_frac, seconds_full = math.modf(seconds)
+        # Divide the seconds to get the days and seconds
+        days, remaining_seconds = divmod(seconds_full, 24 * 3600)
+        return int(days), int(seconds_full + remaining_seconds), second_frac
+
+    @classmethod
+    def _convert_microseconds_to_days_n_seconds(cls, microseconds: Union[int, float]) -> tuple[int, int, float]:
+        if isinstance(microseconds, float):
+            seconds, u_sec = divmod(microseconds, 1000000)
+            days, full_seconds = divmod(seconds, 24 * 3600)
+        else:
+            seconds, u_sec = divmod(int(microseconds), 1000000)
+            days, full_seconds = divmod(seconds, 24 * 3600)
+        return int(days), int(full_seconds), u_sec
 
     def __str__(self):
         """Return a string representation of the timedelta."""
