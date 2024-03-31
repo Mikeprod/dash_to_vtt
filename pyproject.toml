@@ -26,6 +26,10 @@ flake8-eradicate = "^1.4.0"
 pre-commit = "^3.2.2"
 naming = "^0.7.0"
 
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.1.1"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
