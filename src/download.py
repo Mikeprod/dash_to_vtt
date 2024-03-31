@@ -1,12 +1,14 @@
 import re
+from logging import getLogger
 from pathlib import Path
 from urllib.error import URLError
 from urllib.request import urlopen
 
 from tqdm import tqdm
 
+LOGGER = getLogger(__name__)
 # Paste your dash stream url here
-stream = ""
+STREAM = ""
 
 
 def is_url_available(url: str) -> bool:
@@ -57,8 +59,8 @@ def download_dashed_vtt(url: str, dl_dir: str, segment_step: int = 10000, segmen
     destination = Path(dl_dir)
     destination.mkdir(parents=True, exist_ok=True)
 
-    print(f"Downloading segments to {destination.absolute()}")
-    print("After evaluating the number of segments, the download will start.")
+    LOGGER.info(f"Downloading segments to {destination.absolute()}")
+    LOGGER.info("After evaluating the number of segments, the download will start.")
     for i in tqdm(range(*define_segment_range(segment_url, segment_step), segment_step)):
         with urlopen(segment_url.replace("-0.dash", f"-{i}.dash")) as data:
             with open(f"{dl_dir}/{i:08d}.mp4", "wb") as writer:
@@ -66,4 +68,4 @@ def download_dashed_vtt(url: str, dl_dir: str, segment_step: int = 10000, segmen
 
 
 if __name__ == "__main__":
-    download_dashed_vtt(stream, "dash", 10000)
+    download_dashed_vtt(STREAM, "dash", 10000)

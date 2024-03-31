@@ -1,9 +1,11 @@
+from logging import getLogger
 from re import findall
 from typing import Any
 
 from src.mp4 import Mp4
 from utils import get_int, timedelta_new
 
+LOGGER = getLogger(__name__)
 VTT_HEADER = "WEBVTT\n"
 
 
@@ -44,7 +46,7 @@ def deduplicate_subtitles(subtitles: str) -> str:
                 text = subs[i][start_text:]
 
         except ValueError:
-            print("Split issue in deduplication")
+            LOGGER.error("Split issue in deduplication")
         subtitle_entries.append((start_date[0] if len(start_date) == 1 else start_date[1], end_date[0], text))
 
     cleaned_entries = []
