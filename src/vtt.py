@@ -3,40 +3,60 @@ from re import findall
 from typing import Any
 
 from src.mp4 import Mp4
-from utils import get_int, timedelta_new
+from src.utils import get_int, timedelta_new
 
 LOGGER = getLogger(__name__)
 VTT_HEADER = "WEBVTT\n"
 
 
-def extract_text(text: bytes) -> str:
+def extract_text(text: bytes) -> dict[str, str]:
     """Extract the text from the mp4 subtitles.
+
+    It also extracts the style for the subtitles as well
 
     :param text: text to extract
     :type text: bytes
-    :return: extracted text
-    :rtype: str
+    :return: extracted text and style
+    :rtype: dict
     """
     if text[:4] == b"vtte":
-        return ""
+        return {"text": "", "style": ""}
     else:
-        payload_tag = text.index(b"payl")
-        payload_size = get_int(text[payload_tag - 4 : payload_tag])
-        cursor = payload_tag + 4
-        payload = text[cursor : cursor + payload_size]
-        if payload[-4:] == b"vsid":
-            payload = payload[:-8]
-        payload_cpy = bytes(reversed(payload))
-        closing = 0
-        try:
-            closing = payload_cpy.index(b"\x3e")
-        except ValueError:
-            pass
+        if text[:4] == b"vttc":
+            return parse_vtt_cue(text)
+        raise ValueError("Unexpected value in the subtitle")
 
-        if closing > 0:
-            return payload[:-closing].decode("utf-8")
-        else:
-            return payload.decode("utf-8")
+
+def parse_vtt_cue(cue: bytes) -> dict[str, str]:
+    """Parse the content that starts with vttc.
+
+    vttc stands for VTT Cue.
+
+    :param cue: The content retrieved from the mp4 data
+    :type cue: bytes
+    :return: the text and style of the VTT Cue
+
+    """
+    header_start = 8
+    cue_header_size = get_int(cue[4:header_start])
+    decoded_style = cue[header_start : header_start + cue_header_size - 4].decode("utf-8").replace("sttg", "")
+
+    payload_tag = cue.index(b"payl")
+    payload_size = get_int(cue[payload_tag - 4 : payload_tag])
+    cursor = payload_tag + 4
+    payload = cue[cursor : cursor + payload_size]
+    if payload[-4:] == b"vsid":
+        payload = payload[:-8]
+    payload_cpy = bytes(reversed(payload))
+    closing = 0
+    try:
+        closing = payload_cpy.index(b"\x3e")
+    except ValueError:
+        pass
+    if closing > 0:
+        return {"text": payload[:-closing].decode("utf-8"), "style": decoded_style}
+    else:
+        return {"text": payload.decode("utf-8"), "style": decoded_style}
 
 
 def deduplicate_subtitles(subtitles: str) -> str:
@@ -52,8 +72,9 @@ def deduplicate_subtitles(subtitles: str) -> str:
     for i in range(1, len(subs)):
         start_date = findall(r"\d+:\d+:\d+.\d+", subs[i - 1])  # handle days ?!
         end_date = findall(r"\d+:\d+:\d+.\d+", subs[i])  # handle days ?!
+        text = ""
         try:
-            start_text = subs[i].index(f"{end_date[0]}\n") + len(f"{end_date[0]}\n")
+            start_text = subs[i].index(f"{end_date[0]}") + len(f"{end_date[0]}")
             if len(end_date) == 2:
                 text = subs[i][start_text : subs[i].index(f"\n\n{end_date[1]}")]
             else:
@@ -71,7 +92,7 @@ def deduplicate_subtitles(subtitles: str) -> str:
 
     subtitles_text = VTT_HEADER
     for start, end, text in cleaned_entries:
-        subtitles_text += f"\n{start} --> {end}\n{text}\n"
+        subtitles_text += f"\n{start} --> {end}{text}\n"
     return subtitles_text
 
 
@@ -107,5 +128,5 @@ def vtt_from_mp4(mp4: Mp4) -> str:
     subtitles = ""
     for i in range(len(subs)):
         if subs[i] != "":
-            subtitles += f"\n{timeline[i]}\n{subs[i]}\n"
+            subtitles += f"\n{timeline[i]} {subs[i]['style']}\n{subs[i]['text']}\n"
     return subtitles
