@@ -10,3 +10,13 @@ Dash to VTT is a simple Python script that converts DASH subtitles to human and 
 ## Requirements
 - Python 3.9
 - Poetry
+
+# Install
+````shell
+poetry install
+````
+# Commands
+All the tools are accessible via poetry with a single command
+````shell
+poetry run dashvtt
+````
