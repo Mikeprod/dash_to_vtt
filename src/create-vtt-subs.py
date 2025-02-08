@@ -8,10 +8,9 @@ from argparse import ArgumentParser, Namespace
 from logging import getLogger
 from os import listdir
 
-from mp4 import Mp4
-from src.vtt import vtt_from_mp4
-from utils import order_alphabetically
-from vtt import VTT_HEADER, deduplicate_subtitles
+from src.mp4 import Mp4
+from src.utils import order_alphabetically
+from src.vtt import VTT_HEADER, deduplicate_subtitles, vtt_from_mp4
 
 logger = getLogger(__name__)
 
