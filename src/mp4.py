@@ -3,7 +3,7 @@
 Author: Mikeprod
 """
 
-import os
+from pathlib import Path
 from typing import Any, NamedTuple
 
 from src.utils import get_int
@@ -32,18 +32,18 @@ def int_4(content: bytes, cursor: int) -> int:
 class Mp4:
     """MP4 file class."""
 
-    def __init__(self, path: str, load: bool) -> None:
+    def __init__(self, path: Path, load: bool) -> None:
         """Create an Mp4 object.
 
         :param path: path to the mp4 file
-        :type path: str
+        :type path: Path
         :param load:  whether to load the file content in memory at creation
         :type load: bool
         :return: None
         """
-        if not os.path.isfile(path):
+        if not path.is_file():
             raise FileNotFoundError(f"File {path} not found")
-        self.path = os.path.abspath(path)
+        self.path = path.absolute()
         self.content = None
         self._blocks_for_analysis = {}
         if load:
@@ -51,7 +51,7 @@ class Mp4:
 
     def load(self) -> None:
         """Load the file content in memory."""
-        with open(self.path, "rb") as f:
+        with self.path.open("rb") as f:
             self.content = f.read()
 
     def _analyse_blocks(self) -> None:
@@ -68,7 +68,7 @@ class Mp4:
         :type start: int, optional
         :param stop: stop cursor position, defaults to 0
         :type stop: int, optional
-        :return: dictionalry of blocks
+        :return: dictionary of blocks
         :rtype: dict[str, Block]
         """
         if not self.content:

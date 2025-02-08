@@ -16,7 +16,7 @@ files = [
 name = "click"
 version = "8.1.8"
 description = "Composable command line interface toolkit"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [

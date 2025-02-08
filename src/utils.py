@@ -1,9 +1,9 @@
 import math
 from datetime import timedelta
-from typing import List, Union
+from typing import Iterable, Union
 
 
-def order_alphabetically(unsorted_list: List[str]) -> List[str]:
+def order_alphabetically(unsorted_list: Iterable[str]) -> Iterable[str]:
     """Order a list of segment names alphabetically.
 
     :param unsorted_list: list of strings to order
