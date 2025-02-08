@@ -6,7 +6,7 @@ Author: Mikeprod
 import os
 from typing import Any, NamedTuple
 
-from utils import get_int
+from src.utils import get_int
 
 
 class Block(NamedTuple):
@@ -242,16 +242,10 @@ class Mp4:
         block = self._blocks_for_analysis["mdat"]
         samples = self.blocks["moof"]["traf"]["trun"]["samples"]
         cursor = 0
-        # Improve the following in one loop
-        samples_content_indices = []
-        for sample in samples:
-            samples_content_indices.append({"start": block.content.index(sample["sample_flag"], cursor) + 4, "end": -1})
-            cursor = samples_content_indices[-1]["start"]
-            if len(samples_content_indices) > 1:
-                samples_content_indices[-2]["end"] = samples_content_indices[-1]["start"] - 4
-        samples_content_indices[-1]["end"] = len(block.content)
-
         samples_content = []
-        for sample in samples_content_indices:
-            samples_content.append(block.content[sample["start"] : sample["end"]])
+        for sample in samples:
+            content_start = block.content.index(sample["sample_flag"], cursor) + 4
+            cursor = content_start + get_int(sample["sample_flag"]) - 4
+            samples_content.append(block.content[content_start:cursor])
+
         return {"content": block.content, "samples_content": samples_content}
